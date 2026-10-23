@@ -18,10 +18,10 @@ struct GAConfig {
             throw invalid_argument("populationSize must be greater than zero.");
         if (maxGenerations == 0)
             throw invalid_argument("maxGenerations must be greater than zero.");
-        if (!(crossoverProbability >= 0.4 && crossoverProbability <= 0.7))
+        if (!(crossoverProbability >= 0.0 && crossoverProbability <= 1.0))
             throw invalid_argument("crossoverProbability must be in [0, 1].");
-        if (!(mutationProbability >= 0.001 && mutationProbability <= 0.1))
-            throw invalid_argument("mutationProbability must be in [0.001, 0.1].");
+        if (!(mutationProbability >= 0.0 && mutationProbability <= 1.0))
+            throw invalid_argument("mutationProbability must be in [0, 1].");
     }
 };
 
