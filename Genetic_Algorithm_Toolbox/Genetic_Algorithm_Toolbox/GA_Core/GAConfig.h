@@ -10,7 +10,7 @@ struct GAConfig {
     size_t populationSize = 100;
     size_t maxGenerations = 500;
     double crossoverProbability = 0.7;
-    double mutationProbability = 0.1;
+    double mutationProbability = 0.01;
     unsigned int seed = 42;
 
     void validate() const {
