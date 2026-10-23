@@ -19,9 +19,11 @@ public:
         std::mt19937& rng
     ) const override
     {
-        if (probability < 0.0 || probability > 1.0) {
+        
+        // 0.001 <= Pm <= 0.1
+        if (probability < 0.001 || probability > 0.1) {
             throw std::invalid_argument(
-                "Mutation probability must be between 0 and 1."
+                "Mutation probability must be between 0.001 and 0.1."
             );
         }
 
@@ -34,7 +36,9 @@ public:
 
         for (auto& gene : genes) {
 
-            if (distribution(rng) < probability) {
+            double randomNumber = distribution(rng);
+
+            if (randomNumber <= probability) {
                 gene = 1 - gene;
             }
         }
