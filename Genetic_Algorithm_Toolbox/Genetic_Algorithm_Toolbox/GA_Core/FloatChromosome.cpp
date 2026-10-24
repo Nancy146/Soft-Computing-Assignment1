@@ -4,8 +4,10 @@
 
 namespace ga {
 
+using namespace std;
+
 FloatChromosome::FloatChromosome(
-    std::size_t length,
+    size_t length,
     double minValue,
     double maxValue
 )
@@ -14,14 +16,14 @@ FloatChromosome::FloatChromosome(
       maxValue(maxValue)
 {
     if (minValue > maxValue) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "FloatChromosome: minValue cannot be greater than maxValue."
         );
     }
 }
 
 FloatChromosome::FloatChromosome(
-    const std::vector<double>& genes,
+    const vector<double>& genes,
     double minValue,
     double maxValue
 )
@@ -30,21 +32,21 @@ FloatChromosome::FloatChromosome(
       maxValue(maxValue)
 {
     if (minValue > maxValue) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "FloatChromosome: minValue cannot be greater than maxValue."
         );
     }
 
     if (!isValid()) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "FloatChromosome: gene is outside the allowed range."
         );
     }
 }
 
-void FloatChromosome::initialize(std::mt19937& rng)
+void FloatChromosome::initialize(mt19937& rng)
 {
-    std::uniform_real_distribution<double> distribution(
+    uniform_real_distribution<double> distribution(
         minValue,
         maxValue
     );
@@ -54,17 +56,17 @@ void FloatChromosome::initialize(std::mt19937& rng)
     }
 }
 
-std::vector<double>& FloatChromosome::getGenes()
+vector<double>& FloatChromosome::getGenes()
 {
     return genes;
 }
 
-const std::vector<double>& FloatChromosome::getGenes() const
+const vector<double>& FloatChromosome::getGenes() const
 {
     return genes;
 }
 
-std::size_t FloatChromosome::size() const
+size_t FloatChromosome::size() const
 {
     return genes.size();
 }
