@@ -7,6 +7,9 @@
 #include <stdexcept>
 
 namespace ga {
+
+using namespace std;
+
 class BitFlipMutation
     : public MutationStrategy<BinaryChromosome>
 {
@@ -15,7 +18,7 @@ public:
     void mutate(
         BinaryChromosome& chromosome,
         double probability,
-        std::mt19937& rng
+        mt19937& rng
     ) const override
     {
         checkMutationProbability(probability);
