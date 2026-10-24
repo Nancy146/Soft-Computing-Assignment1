@@ -6,31 +6,33 @@
 
 namespace ga {
 
+using namespace std;
+
 class FloatChromosome {
 private:
-    std::vector<double> genes;
+    vector<double> genes;
     double minValue;
     double maxValue;
 
 public:
     FloatChromosome(
-        std::size_t length,
+        size_t length,
         double minValue,
         double maxValue
     );
 
     FloatChromosome(
-        const std::vector<double>& genes,
+        const vector<double>& genes,
         double minValue,
         double maxValue
     );
 
-    void initialize(std::mt19937& rng);
+    void initialize(mt19937& rng);
 
-    std::vector<double>& getGenes();
-    const std::vector<double>& getGenes() const;
+    vector<double>& getGenes();
+    const vector<double>& getGenes() const;
 
-    std::size_t size() const;
+    size_t size() const;
 
     bool isValid() const;
 
