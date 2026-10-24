@@ -11,25 +11,28 @@
 
 namespace cvrp_exact {
 
+using namespace std;
+using namespace ga;
+
 struct Solution {
     bool feasible = false;
     double distance = 1e18;
-    ga::CVRPDecoder::Routes routes;
+    CVRPDecoder::Routes routes;
 };
 
-inline Solution solve(const ga::CVRPProblem& problem, const ga::DistanceMatrix& d) {
+inline Solution solve(const CVRPProblem& problem, const DistanceMatrix& d) {
     int n = static_cast<int>(problem.customerCount());
     int maxRoutes = problem.vehicleCount;
     if (n > 10)
-        throw std::invalid_argument("cvrp_exact::solve: at most 10 customers.");
+        throw invalid_argument("cvrp_exact::solve: at most 10 customers.");
 
-    std::vector<int> order(n);
-    std::iota(order.begin(), order.end(), 1);
+    vector<int> order(n);
+    iota(order.begin(), order.end(), 1);
     Solution best;
 
     do {
-        std::vector<std::vector<double>> cost(maxRoutes + 1, std::vector<double>(n + 1, 1e18));
-        std::vector<std::vector<int>> cut(maxRoutes + 1, std::vector<int>(n + 1, 0));
+        vector<vector<double>> cost(maxRoutes + 1, vector<double>(n + 1, 1e18));
+        vector<vector<int>> cut(maxRoutes + 1, vector<int>(n + 1, 0));
         cost[0][0] = 0;
 
         for (int k = 1; k <= maxRoutes; k++) {
@@ -65,12 +68,12 @@ inline Solution solve(const ga::CVRPProblem& problem, const ga::DistanceMatrix& 
                 for (int r = k; r > 0; r--) {
                     int start = cut[r][end];
                     best.routes.insert(best.routes.begin(),
-                                       ga::CVRPDecoder::Route(order.begin() + start, order.begin() + end));
+                                       CVRPDecoder::Route(order.begin() + start, order.begin() + end));
                     end = start;
                 }
             }
         }
-    } while (std::next_permutation(order.begin(), order.end()));
+    } while (next_permutation(order.begin(), order.end()));
 
     return best;
 }
