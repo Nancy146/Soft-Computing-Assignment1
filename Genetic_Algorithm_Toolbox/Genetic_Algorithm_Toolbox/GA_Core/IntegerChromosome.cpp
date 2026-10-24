@@ -4,8 +4,10 @@
 
 namespace ga {
 
+using namespace std;
+
 IntegerChromosome::IntegerChromosome(
-    std::size_t length,
+    size_t length,
     int minValue,
     int maxValue
 )
@@ -14,14 +16,14 @@ IntegerChromosome::IntegerChromosome(
       maxValue(maxValue)
 {
     if (minValue > maxValue) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "IntegerChromosome: minValue cannot be greater than maxValue."
         );
     }
 }
 
 IntegerChromosome::IntegerChromosome(
-    const std::vector<int>& genes,
+    const vector<int>& genes,
     int minValue,
     int maxValue
 )
@@ -30,21 +32,21 @@ IntegerChromosome::IntegerChromosome(
       maxValue(maxValue)
 {
     if (minValue > maxValue) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "IntegerChromosome: minValue cannot be greater than maxValue."
         );
     }
 
     if (!isValid()) {
-        throw std::invalid_argument(
+        throw invalid_argument(
             "IntegerChromosome: gene is outside the allowed range."
         );
     }
 }
 
-void IntegerChromosome::initialize(std::mt19937& rng)
+void IntegerChromosome::initialize(mt19937& rng)
 {
-    std::uniform_int_distribution<int> distribution(
+    uniform_int_distribution<int> distribution(
         minValue,
         maxValue
     );
@@ -54,17 +56,17 @@ void IntegerChromosome::initialize(std::mt19937& rng)
     }
 }
 
-std::vector<int>& IntegerChromosome::getGenes()
+vector<int>& IntegerChromosome::getGenes()
 {
     return genes;
 }
 
-const std::vector<int>& IntegerChromosome::getGenes() const
+const vector<int>& IntegerChromosome::getGenes() const
 {
     return genes;
 }
 
-std::size_t IntegerChromosome::size() const
+size_t IntegerChromosome::size() const
 {
     return genes.size();
 }
