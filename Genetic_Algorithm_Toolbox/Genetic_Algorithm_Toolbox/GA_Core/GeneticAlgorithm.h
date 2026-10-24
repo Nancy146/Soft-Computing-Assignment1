@@ -12,7 +12,6 @@
 #include <vector>
 
 namespace ga {
-
 using namespace std;
 
 template <typename C>
@@ -22,8 +21,8 @@ struct GAResult {
     size_t bestGeneration = 0;
     bool bestIsFeasible = false;
 
-    vector<double> bestHistory;     // best fitness in the population
-    vector<double> averageHistory;  // average fitness of the population
+    vector<double> bestHistory;
+    vector<double> averageHistory;
 };
 
 template <typename C>
@@ -38,15 +37,15 @@ public:
                      shared_ptr<const CrossoverStrategy<C>> crossover,
                      shared_ptr<const MutationStrategy<C>> mutation,
                      shared_ptr<const ReplacementStrategy<C>> replacement)
-        : config_(move(config)),
-          initialPopulation_(move(initialPopulation)),
-          fitnessFunction_(move(fitnessFunction)),
-          feasibilityFunction_(move(feasibilityFunction)),
-          infeasibilityHandler_(move(infeasibilityHandler)),
-          selection_(move(selection)),
-          crossover_(move(crossover)),
-          mutation_(move(mutation)),
-          replacement_(move(replacement)) {
+        : config_(std::move(config)),
+          initialPopulation_(std::move(initialPopulation)),
+          fitnessFunction_(std::move(fitnessFunction)),
+          feasibilityFunction_(std::move(feasibilityFunction)),
+          infeasibilityHandler_(std::move(infeasibilityHandler)),
+          selection_(std::move(selection)),
+          crossover_(std::move(crossover)),
+          mutation_(std::move(mutation)),
+          replacement_(std::move(replacement)) {
         validate();
     }
 
@@ -60,17 +59,12 @@ public:
         for (C& chromosome : population)
             fitness.push_back(evaluate(chromosome, rng));
 
-        GAResult<C> result;
+        size_t best = bestIndex(fitness);
+        GAResult<C> result{population[best], fitness[best], 0, false, {}, {}};
         result.bestHistory.reserve(config_.maxGenerations + 1);
         result.averageHistory.reserve(config_.maxGenerations + 1);
-
-        size_t best = bestIndex(fitness);
-        result.bestChromosome = population[best];
-        result.bestFitness = fitness[best];
-        result.bestGeneration = 0;
         record(fitness, best, result);
 
-        uniform_real_distribution<double> unit(0.0, 1.0);
         Population<C> offspring;
         vector<double> offspringFitness;
 
@@ -81,19 +75,17 @@ public:
             offspringFitness.reserve(n);
 
             while (offspring.size() < n) {
-                // Selection
                 const C& parent1 = population[checkedIndex(selection_->select(population, fitness, rng), n)];
                 const C& parent2 = population[checkedIndex(selection_->select(population, fitness, rng), n)];
 
-                // Crossover with probability Pc, otherwise the children are copies of the parents.
-                pair<C, C> children = (unit(rng) < config_.crossoverProbability)
+                const double r2 = randomUnitInclusive(rng);
+                pair<C, C> children = (r2 <= config_.crossoverProbability)
                                           ? crossover_->crossover(parent1, parent2, rng)
                                           : make_pair(parent1, parent2);
 
-                // Mutation + evaluation of the offspring.
-                addChild(move(children.first), offspring, offspringFitness, rng);
+                addChild(std::move(children.first), offspring, offspringFitness, rng);
                 if (offspring.size() < n)
-                    addChild(move(children.second), offspring, offspringFitness, rng);
+                    addChild(std::move(children.second), offspring, offspringFitness, rng);
             }
 
             ReplacementResult<C> next =
@@ -101,8 +93,8 @@ public:
             if (next.population.size() != n || next.fitness.size() != n)
                 throw logic_error("Replacement must return populationSize chromosomes and fitness values.");
 
-            population = move(next.population);
-            fitness = move(next.fitness);
+            population = std::move(next.population);
+            fitness = std::move(next.fitness);
 
             best = bestIndex(fitness);
             if (fitness[best] > result.bestFitness) {
@@ -144,7 +136,7 @@ private:
     void addChild(C child, Population<C>& offspring, vector<double>& offspringFitness, mt19937& rng) const {
         mutation_->mutate(child, config_.mutationProbability, rng);
         offspringFitness.push_back(evaluate(child, rng));
-        offspring.push_back(move(child));
+        offspring.push_back(std::move(child));
     }
 
     static size_t bestIndex(const vector<double>& fitness) {

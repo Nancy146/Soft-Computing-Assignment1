@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Interfaces.h"
+#include "Interfaces.h"
 
 #include <algorithm>
 #include <cmath>
@@ -11,7 +11,6 @@
 #include <vector>
 
 namespace ga {
-
 template <typename C>
 class RouletteWheelSelection : public SelectionStrategy<C> {
 public:
@@ -42,17 +41,13 @@ public:
         double totalWeight = 0.0;
 
         for (std::size_t i = 0; i < fitness.size(); ++i) {
-
             weights[i] =
                 fitness[i] - minimumFitness;
 
             totalWeight += weights[i];
         }
 
-        // If all fitness values are equal,
-        // every chromosome has the same probability.
         if (totalWeight <= 0.0) {
-
             std::uniform_int_distribution<std::size_t> distribution(
                 0,
                 population.size() - 1
@@ -71,7 +66,6 @@ public:
         double cumulative = 0.0;
 
         for (std::size_t i = 0; i < weights.size(); ++i) {
-
             cumulative += weights[i];
 
             if (randomValue <= cumulative) {
@@ -79,7 +73,6 @@ public:
             }
         }
 
-        // Floating-point safety fallback
         return weights.size() - 1;
     }
 };

@@ -1,27 +1,35 @@
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <random>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
-
 namespace ga {
-
 using namespace std;
 
 template <typename C>
 using Population = vector<C>;
 
-// Provided by the user of the toolbox (CVRP: Member 5).
+inline double randomUnitInclusive(mt19937& rng) {
+    constexpr uint64_t steps = uint64_t{1} << 53;
+    return static_cast<double>(uniform_int_distribution<uint64_t>(0, steps)(rng)) /
+           static_cast<double>(steps);
+}
+
+inline void checkMutationProbability(double probability) {
+    if (!(probability >= 0.001 && probability <= 0.1))
+        throw invalid_argument("Mutation probability must be in [0.001, 0.1] (inclusive).");
+}
+
 template <typename C>
 using FitnessFunction = function<double(const C&)>;
 
-// Provided by the user of the toolbox (CVRP: Member 4).
 template <typename C>
 using FeasibilityFunction = function<bool(const C&)>;
 
-// Member 2. Returns the INDEX of the selected parent in `population`.
 template <typename C>
 class SelectionStrategy {
 public:
@@ -31,8 +39,6 @@ public:
                           mt19937& rng) const = 0;
 };
 
-// Member 3. Always performs crossover; the GA loop has already decided
-// (with probability Pc) that crossover should happen. Parents are not modified.
 template <typename C>
 class CrossoverStrategy {
 public:
@@ -42,8 +48,6 @@ public:
                                  mt19937& rng) const = 0;
 };
 
-// Members 2 & 3. Mutates `chromosome` in place.
-// `probability` is GAConfig::mutationProbability (Pm), unchanged.
 template <typename C>
 class MutationStrategy {
 public:
@@ -53,9 +57,6 @@ public:
                         mt19937& rng) const = 0;
 };
 
-// Member 4. Called by the GA ONLY for chromosomes that fail the feasibility
-// check. Decides what happens to them (penalty, repair, ...) and returns the
-// fitness to use. A repair strategy may modify `chromosome` in place.
 template <typename C>
 class InfeasibilityHandler {
 public:
@@ -66,15 +67,12 @@ public:
                           mt19937& rng) const = 0;
 };
 
-// Returned by replacement so the GA keeps survivors' fitness instead of
-// evaluating them again. fitness[i] belongs to population[i].
 template <typename C>
 struct ReplacementResult {
     Population<C> population;
     vector<double> fitness;
 };
 
-//Member1
 template <typename C>
 class ReplacementStrategy {
 public:

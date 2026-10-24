@@ -16,7 +16,6 @@
 using namespace std;
 using namespace ga;
 
-// ───────────────────────────── tiny test runner ─────────────────────────────
 static int failures = 0;
 static int checks = 0;
 
@@ -46,7 +45,6 @@ static void runTest(const string& name, const function<void()>& test) {
     cout << (failures == before ? "[PASS] " : "[FAIL] ") << name << '\n';
 }
 
-// ───────────────────────────── test stubs ─────────────────────────────
 struct Bits {
     vector<int> genes;
     bool operator==(const Bits& other) const { return genes == other.genes; }
@@ -99,7 +97,6 @@ struct ConstantHandler final : InfeasibilityHandler<Bits> {
     }
 };
 
-// ───────────────────────────── helpers ─────────────────────────────
 static double oneMax(const Bits& c) {
     double s = 0;
     for (int g : c.genes) s += g;
@@ -141,7 +138,6 @@ struct Setup {
     }
 };
 
-// ───────────────────────────── tests ─────────────────────────────
 static void testConfigValidation() {
     CHECK(!throwsType<invalid_argument>([] { GAConfig{}.validate(); }));
 
@@ -158,14 +154,34 @@ static void testConfigValidation() {
     CHECK(invalid([](GAConfig& c) { c.mutationProbability = 1.5; }));
     CHECK(invalid([](GAConfig& c) { c.mutationProbability = numeric_limits<double>::quiet_NaN(); }));
 
-    // Boundary values are valid.
-    CHECK(!invalid([](GAConfig& c) { c.crossoverProbability = 0.0; c.mutationProbability = 1.0; }));
+    CHECK(!invalid([](GAConfig& c) { c.crossoverProbability = 0.4; c.mutationProbability = 0.001; }));
+    CHECK(!invalid([](GAConfig& c) { c.crossoverProbability = 0.7; c.mutationProbability = 0.1; }));
+    CHECK(invalid([](GAConfig& c) { c.crossoverProbability = 0.39; }));
+    CHECK(invalid([](GAConfig& c) { c.crossoverProbability = nextafter(0.4, 0.0); }));
+    CHECK(invalid([](GAConfig& c) { c.crossoverProbability = 0.71; }));
+    CHECK(invalid([](GAConfig& c) { c.crossoverProbability = nextafter(0.7, 1.0); }));
+    CHECK(invalid([](GAConfig& c) { c.mutationProbability = 0.0; }));
+    CHECK(invalid([](GAConfig& c) { c.mutationProbability = 0.0009; }));
+    CHECK(invalid([](GAConfig& c) { c.mutationProbability = 0.11; }));
+}
+
+static void testRandomUnitInclusiveRange() {
+    mt19937 rng(3);
+    bool inRange = true;
+    for (int i = 0; i < 100000; ++i) {
+        const double r = randomUnitInclusive(rng);
+        if (!(r >= 0.0 && r <= 1.0)) inRange = false;
+    }
+    CHECK(inRange);
+
+    mt19937 a(11), b(11);
+    CHECK(randomUnitInclusive(a) == randomUnitInclusive(b));
 }
 
 static void testConstructorRejectsBadInput() {
     {
         Setup s;
-        s.config.populationSize = 10;   // population has 30
+        s.config.populationSize = 10;
         CHECK(throwsType<invalid_argument>([&] { s.build(); }));
     }
     {
@@ -195,7 +211,6 @@ static void testSameSeedSameResult() {
     CHECK(a.bestHistory == b.bestHistory);
     CHECK(a.averageHistory == b.averageHistory);
 
-    // Calling run() twice on the same object also gives the same result.
     const auto ga = s.build();
     CHECK(ga.run().averageHistory == ga.run().averageHistory);
 }
@@ -211,7 +226,7 @@ static void testElitismNeverLosesBest() {
     for (unsigned int seed = 1; seed <= 20; ++seed) {
         Setup s;
         s.config.seed = seed;
-        s.config.mutationProbability = 0.2;   // heavy mutation: offspring are often worse
+        s.config.mutationProbability = 0.1;
         s.replacement = make_shared<ElitistReplacement<Bits>>();
         const auto result = s.build().run();
         for (size_t g = 1; g < result.bestHistory.size(); ++g)
@@ -227,10 +242,10 @@ static void testGaSolvesOneMax() {
         s.selection = make_shared<TournamentSelection2>();
         s.replacement = replacement;
         const auto result = s.build().run();
-        CHECK(result.bestFitness >= 28);                               // out of 32
+        CHECK(result.bestFitness >= 28);
         CHECK(result.bestHistory.back() > result.bestHistory.front());
         CHECK(result.bestIsFeasible);
-        CHECK(oneMax(result.bestChromosome) == result.bestFitness);    // fitness matches the chromosome
+        CHECK(oneMax(result.bestChromosome) == result.bestFitness);
     }
 }
 
@@ -243,28 +258,45 @@ static void testFitnessEvaluatedOncePerNewIndividual() {
         calls = 0;
         s.replacement = replacement;
         s.build().run();
-        // N initial evaluations + N offspring per generation; survivors are never re-evaluated.
         CHECK(calls == s.config.populationSize * (s.config.maxGenerations + 1));
     }
 }
 
 static void testCrossoverProbabilityDecidedByCore() {
-    for (double pc : {0.0, 1.0}) {
+    struct FirstIndexSelection final : SelectionStrategy<Bits> {
+        size_t select(const Population<Bits>&, const vector<double>&, mt19937&) const override { return 0; }
+    };
+    unsigned int seed = 1;
+    double r2 = 0.0;
+    for (;; ++seed) {
+        mt19937 probe(seed);
+        r2 = randomUnitInclusive(probe);
+        if (r2 > 0.4 && r2 < 0.7) break;
+    }
+
+    auto crossoverCalls = [seed](double pc) {
         Setup s;
+        s.config.populationSize = 2;
+        s.config.maxGenerations = 1;
+        s.config.seed = seed;
         s.config.crossoverProbability = pc;
+        s.population = randomPopulation(2, 32, 7);
+        s.selection = make_shared<FirstIndexSelection>();
+        s.mutation = make_shared<NoMutation>();
         auto crossover = make_shared<OnePointCrossover>();
         s.crossover = crossover;
         s.build().run();
-        const size_t pairsPerGeneration = (s.config.populationSize + 1) / 2;
-        CHECK(crossover->calls == (pc == 0.0 ? 0 : pairsPerGeneration * s.config.maxGenerations));
-    }
+        return crossover->calls;
+    };
+    CHECK(crossoverCalls(r2) == 1);
+    CHECK(crossoverCalls(nextafter(r2, 1.0)) == 1);
+    CHECK(crossoverCalls(nextafter(r2, 0.0)) == 0);
 }
 
 static void testInfeasibleGoesToHandler() {
     Setup s;
     s.config.maxGenerations = 5;
     size_t infeasible = 0;
-    // Infeasible if the first gene is 1.
     s.feasibility = [&infeasible](const Bits& c) {
         const bool ok = c.genes[0] == 0;
         if (!ok) ++infeasible;
@@ -278,7 +310,6 @@ static void testInfeasibleGoesToHandler() {
     const auto result = s.build().run();
     const size_t evaluated = s.config.populationSize * (s.config.maxGenerations + 1);
 
-    // The final feasibility check on the best chromosome is also counted in `infeasible`.
     const size_t finalCheckInfeasible = result.bestIsFeasible ? 0 : 1;
     CHECK(handler->calls == infeasible - finalCheckInfeasible);
     CHECK(fitnessCalls + handler->calls == evaluated);
@@ -306,18 +337,16 @@ static void testElitistReplacement() {
     ElitistReplacement<Bits> replacement;
     const Population<Bits> current = randomPopulation(5, 8, 1);
     const Population<Bits> offspring = randomPopulation(5, 8, 2);
-    const vector<double> currentFitness{3, 10, 2, 1, 4};      // best = index 1
-    const vector<double> offspringFitness{5, 1, 7, 6, 2};     // all worse than 10
+    const vector<double> currentFitness{3, 10, 2, 1, 4};
+    const vector<double> offspringFitness{5, 1, 7, 6, 2};
 
     const auto next = replacement.replace(current, currentFitness, offspring, offspringFitness);
     CHECK(next.population.size() == current.size());
     CHECK(next.fitness.size() == current.size());
 
-    // Best current individual is kept.
     CHECK(next.population[0] == current[1]);
     CHECK(next.fitness[0] == 10);
 
-    // Remaining slots are the best 4 offspring: 7, 6, 5, 2.
     CHECK((vector<double>(next.fitness.begin() + 1, next.fitness.end()) == vector<double>{7, 6, 5, 2}));
     CHECK(next.population[1] == offspring[2]);
     CHECK(next.population[2] == offspring[3]);
@@ -352,6 +381,7 @@ static void testCoreRejectsBrokenComponents() {
 
 int main() {
     runTest("GAConfig validation", testConfigValidation);
+    runTest("Random number r is in [0, 1]", testRandomUnitInclusiveRange);
     runTest("Constructor rejects bad input", testConstructorRejectsBadInput);
     runTest("Same seed gives same result", testSameSeedSameResult);
     runTest("History has one entry per generation", testHistoryLength);

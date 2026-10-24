@@ -1,16 +1,18 @@
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
-#include "../BinaryChromosome.h"
-#include "../IntegerChromosome.h"
-#include "../FloatChromosome.h"
+#include "BinaryChromosome.h"
+#include "IntegerChromosome.h"
+#include "FloatChromosome.h"
 
-#include "../TournamentSelection.h"
-#include "../RouletteWheelSelection.h"
+#include "TournamentSelection.h"
+#include "RouletteWheelSelection.h"
 
-#include "../BitFlipMutation.h"
+#include "BitFlipMutation.h"
 
 using namespace std;
 using namespace ga;
@@ -19,10 +21,6 @@ int main()
 {
     mt19937 rng(42);
 
-    // ==========================================
-    // Binary Chromosome
-    // ==========================================
-
     BinaryChromosome binary(20);
 
     binary.initialize(rng);
@@ -30,16 +28,10 @@ int main()
     assert(binary.size() == 20);
     assert(binary.isValid());
 
-    for (int gene : binary.getGenes()) {
-        assert(gene == 0 || gene == 1);
-    }
+    assert(all_of(binary.getGenes().begin(), binary.getGenes().end(),
+                  [](int gene) { return gene == 0 || gene == 1; }));
 
     cout << "Binary chromosome test passed.\n";
-
-
-    // ==========================================
-    // Integer Chromosome
-    // ==========================================
 
     IntegerChromosome integerChromosome(
         20,
@@ -52,17 +44,10 @@ int main()
     assert(integerChromosome.size() == 20);
     assert(integerChromosome.isValid());
 
-    for (int gene : integerChromosome.getGenes()) {
-        assert(gene >= 0);
-        assert(gene <= 100);
-    }
+    assert(all_of(integerChromosome.getGenes().begin(), integerChromosome.getGenes().end(),
+                  [](int gene) { return gene >= 0 && gene <= 100; }));
 
     cout << "Integer chromosome test passed.\n";
-
-
-    // ==========================================
-    // Float Chromosome
-    // ==========================================
 
     FloatChromosome floatChromosome(
         20,
@@ -75,19 +60,12 @@ int main()
     assert(floatChromosome.size() == 20);
     assert(floatChromosome.isValid());
 
-    for (double gene : floatChromosome.getGenes()) {
-        assert(gene >= -1.0);
-        assert(gene <= 1.0);
-    }
+    assert(all_of(floatChromosome.getGenes().begin(), floatChromosome.getGenes().end(),
+                  [](double gene) { return gene >= -1.0 && gene <= 1.0; }));
 
     cout << "Float chromosome test passed.\n";
 
-
-    // ==========================================
-    // Tournament Selection
-    // ==========================================
-
-    Population<BinaryChromosome> population(5);
+    Population<BinaryChromosome> population(5, BinaryChromosome(4));
 
     vector<double> fitness = {
         10.0,
@@ -100,88 +78,55 @@ int main()
     TournamentSelection<BinaryChromosome> tournament(3);
 
     for (int i = 0; i < 100; ++i) {
-
-        size_t selected =
-            tournament.select(
-                population,
-                fitness,
-                rng
-            );
-
-        assert(selected < population.size());
+        assert(tournament.select(population, fitness, rng) < population.size());
     }
 
     cout << "Tournament selection test passed.\n";
 
-
-    // ==========================================
-    // Roulette Wheel Selection
-    // ==========================================
-
     RouletteWheelSelection<BinaryChromosome> roulette;
 
     for (int i = 0; i < 100; ++i) {
-
-        size_t selected =
-            roulette.select(
-                population,
-                fitness,
-                rng
-            );
-
-        assert(selected < population.size());
+        assert(roulette.select(population, fitness, rng) < population.size());
     }
 
     cout << "Roulette wheel selection test passed.\n";
 
-
-    // ==========================================
-    // Bit Flip Mutation
-    // ==========================================
-
     BinaryChromosome mutationChromosome(
-        vector<int>{0, 0, 0, 0, 0}
+        vector<int>(1000, 0)
     );
 
     BitFlipMutation mutation;
 
-    // Probability = 1
-    // Every bit MUST flip.
     mutation.mutate(
         mutationChromosome,
-        1.0,
+        0.1,
         rng
     );
 
-    for (int gene : mutationChromosome.getGenes()) {
-        assert(gene == 1);
-    }
+    [[maybe_unused]] const auto flipped =
+        count(mutationChromosome.getGenes().begin(), mutationChromosome.getGenes().end(), 1);
+    assert(flipped > 0 && flipped < 1000);
+    assert(mutationChromosome.isValid());
 
     cout << "Bit flip mutation test passed.\n";
-
-
-    // ==========================================
-    // Probability = 0
-    // Nothing should change.
-    // ==========================================
 
     BinaryChromosome unchanged(
         vector<int>{1, 0, 1, 0}
     );
 
-    mutation.mutate(
-        unchanged,
-        0.0,
-        rng
-    );
+    [[maybe_unused]] bool rejected = true;
+    for (double probability : {0.0, 1.0}) {
+        try {
+            mutation.mutate(unchanged, probability, rng);
+            rejected = false;
+        } catch (const invalid_argument&) {
+        }
+    }
 
-    assert(
-        unchanged.getGenes()
-        == vector<int>{1, 0, 1, 0}
-    );
+    assert(rejected);
+    assert((unchanged.getGenes() == vector<int>{1, 0, 1, 0}));
 
     cout << "Mutation probability test passed.\n";
-
 
     cout << "\nAll Member 2 tests passed successfully!\n";
 
