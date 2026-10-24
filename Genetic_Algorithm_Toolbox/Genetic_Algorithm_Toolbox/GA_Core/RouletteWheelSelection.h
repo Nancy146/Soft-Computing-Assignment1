@@ -11,36 +11,39 @@
 #include <vector>
 
 namespace ga {
+
+using namespace std;
+
 template <typename C>
 class RouletteWheelSelection : public SelectionStrategy<C> {
 public:
 
-    std::size_t select(
+    size_t select(
         const Population<C>& population,
-        const std::vector<double>& fitness,
-        std::mt19937& rng
+        const vector<double>& fitness,
+        mt19937& rng
     ) const override
     {
         if (population.empty()) {
-            throw std::invalid_argument(
+            throw invalid_argument(
                 "RouletteWheelSelection: population cannot be empty."
             );
         }
 
         if (population.size() != fitness.size()) {
-            throw std::invalid_argument(
+            throw invalid_argument(
                 "RouletteWheelSelection: population and fitness sizes must match."
             );
         }
 
         double minimumFitness =
-            *std::min_element(fitness.begin(), fitness.end());
+            *min_element(fitness.begin(), fitness.end());
 
-        std::vector<double> weights(fitness.size());
+        vector<double> weights(fitness.size());
 
         double totalWeight = 0.0;
 
-        for (std::size_t i = 0; i < fitness.size(); ++i) {
+        for (size_t i = 0; i < fitness.size(); ++i) {
             weights[i] =
                 fitness[i] - minimumFitness;
 
@@ -48,7 +51,7 @@ public:
         }
 
         if (totalWeight <= 0.0) {
-            std::uniform_int_distribution<std::size_t> distribution(
+            uniform_int_distribution<size_t> distribution(
                 0,
                 population.size() - 1
             );
@@ -56,7 +59,7 @@ public:
             return distribution(rng);
         }
 
-        std::uniform_real_distribution<double> distribution(
+        uniform_real_distribution<double> distribution(
             0.0,
             totalWeight
         );
@@ -65,7 +68,7 @@ public:
 
         double cumulative = 0.0;
 
-        for (std::size_t i = 0; i < weights.size(); ++i) {
+        for (size_t i = 0; i < weights.size(); ++i) {
             cumulative += weights[i];
 
             if (randomValue <= cumulative) {
